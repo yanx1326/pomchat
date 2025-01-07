@@ -87,7 +87,7 @@ class TestGitSync(unittest.TestCase):
         self.assertEqual(saved_message['sender'], test_message['sender'])
 
     @patch('subprocess.Popen')
-    def test_sync_message_with_content(self):
+    def test_sync_message_with_content(self, mock_popen):
         """Test message synchronization with actual content."""
         # Mock successful git commands
         process_mock = MagicMock()
@@ -144,7 +144,7 @@ class TestGitSync(unittest.TestCase):
             self.assertEqual(expected, actual[:len(expected)])
 
     @patch('subprocess.Popen')
-    def test_sync_message_failure(self):
+    def test_sync_message_failure(self, mock_popen):
         """Test handling of Git command failures during sync."""
         # Mock failed git command
         process_mock = MagicMock()
