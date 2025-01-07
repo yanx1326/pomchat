@@ -6,3 +6,4 @@ sqlite3-api==2.0.1
 Werkzeug==3.0.1  # For password hashing and basic web server
 python-dateutil==2.8.2
 markdown2==2.4.10  # For message formatting
+GitPython==3.1.40  # For Git operations
