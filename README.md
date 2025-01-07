@@ -19,8 +19,8 @@ A simple, real-time chat application that allows users to communicate with each 
 
 1. Clone the repository:
 ```bash
-git clone [your-repository-url]
-cd [repository-name]
+git clone https://github.com/yanx1326/aichat.git
+cd aichat
 ```
 
 2. Install the required dependencies:
