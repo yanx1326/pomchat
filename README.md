@@ -1,73 +1,84 @@
-# Basic Chat Application
+# Git-Backed Messaging Application
 
-A simple, real-time chat application that allows users to communicate with each other.
+A simple web-based messaging application that uses Git as a backend storage system. This application allows users to send and receive messages while maintaining a complete history of all communications using Git.
 
 ## Features
 
-- Real-time messaging
-- Simple and intuitive user interface
-- Text-based communication
+- Simple and clean web interface
+- Message persistence using SQLite database
+- Git integration for message history and backup
+- Real-time message updates
+- User authentication via GitHub
+- Markdown support for messages
 
-## Prerequisites
+## Tech Stack
 
-- Python 3.8 or higher
-- Flask
-- Flask-SocketIO
-- HTML/CSS/JavaScript knowledge for frontend modifications
-
-## Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yanx1326/aichat.git
-cd aichat
-```
-
-2. Install the required dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-## Usage
-
-1. Start the server:
-```bash
-python app.py
-```
-
-2. Open your web browser and navigate to:
-```
-http://localhost:5000
-```
-
-3. Start chatting!
+- Backend: Python (no frameworks)
+- Database: SQLite
+- Frontend: HTML, CSS, JavaScript (vanilla)
+- Version Control & Authentication: GitHub API
+- Message Format: JSON
 
 ## Project Structure
 
 ```
 .
 ├── README.md
-├── app.py              # Main Flask application
-├── requirements.txt    # Python dependencies
-├── static/            # Static files (CSS, JavaScript)
-│   ├── css/
-│   └── js/
-└── templates/         # HTML templates
-    └── index.html
+├── .env                 # Environment variables
+├── .gitignore          # Git ignore file
+├── static/             # Static files
+│   ├── css/           
+│   └── js/            
+├── templates/          # HTML templates
+├── database/          
+│   └── messages.db    # SQLite database
+├── server.py          # Main server file
+└── requirements.txt    # Python dependencies
 ```
 
-## Contributing
+## Setup Instructions
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd git-messaging-app
+   ```
+
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Set up environment variables:
+   Create a `.env` file with the following:
+   ```
+   GITHUB_CLIENT_ID=your_github_client_id
+   GITHUB_CLIENT_SECRET=your_github_client_secret
+   ```
+
+5. Initialize the database:
+   ```bash
+   python server.py --init-db
+   ```
+
+6. Run the application:
+   ```bash
+   python server.py
+   ```
+
+7. Open your browser and navigate to `http://localhost:8000`
+
+## Development Status
+
+Project started: January 7, 2025
+Status: In Development
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Last Updated
-
-2025-01-07
+MIT License
