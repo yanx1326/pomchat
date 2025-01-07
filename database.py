@@ -3,6 +3,7 @@ import os
 import logging
 from datetime import datetime
 from typing import List, Dict, Optional
+from git_sync import GitSyncManager
 
 # Configure logging
 logging.basicConfig(
@@ -20,6 +21,7 @@ class DatabaseManager:
         """Initialize database manager with the given database path."""
         self.db_path = db_path
         self._ensure_db_directory()
+        self.git_sync = GitSyncManager(os.path.dirname(os.path.abspath(__file__)))
 
     def _ensure_db_directory(self):
         """Ensure the database directory exists."""
@@ -85,7 +87,7 @@ class DatabaseManager:
 
     def add_message(self, content: str, sender: str, git_hash: Optional[str] = None) -> int:
         """
-        Add a new message to the database.
+        Add a new message to the database and sync with Git.
         
         Args:
             content: The message content
@@ -109,6 +111,28 @@ class DatabaseManager:
                 """, (content, now, sender, git_hash, False, now))
                 
                 message_id = cursor.lastrowid
+                
+                # Prepare message for Git sync
+                message = {
+                    'id': message_id,
+                    'content': content,
+                    'timestamp': now,
+                    'sender': sender,
+                    'created_at': now
+                }
+                
+                # Sync with Git
+                commit_hash = self.git_sync.sync_message(message)
+                if commit_hash:
+                    # Update message with Git information
+                    cursor.execute("""
+                        UPDATE messages
+                        SET git_hash = ?,
+                            is_synchronized = TRUE,
+                            updated_at = ?
+                        WHERE id = ?
+                    """, (commit_hash, now, message_id))
+                
                 logger.info(f"Added message with ID: {message_id}")
                 return message_id
                 
