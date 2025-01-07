@@ -86,6 +86,89 @@ class TestGitSync(unittest.TestCase):
         self.assertEqual(saved_message['content'], test_message['content'])
         self.assertEqual(saved_message['sender'], test_message['sender'])
 
+    @patch('subprocess.Popen')
+    def test_sync_message_with_content(self):
+        """Test message synchronization with actual content."""
+        # Mock successful git commands
+        process_mock = MagicMock()
+        process_mock.communicate.return_value = ('test_commit_hash', '')
+        process_mock.returncode = 0
+        mock_popen.return_value = process_mock
+
+        manager = GitSyncManager(self.test_dir)
+        
+        # Create a test message with realistic content
+        test_message = {
+            'id': 123,
+            'content': 'Hello, this is a test message with emoji 👋',
+            'timestamp': '2025-01-07T15:56:04-05:00',
+            'sender': 'test_user@example.com',
+            'created_at': '2025-01-07T15:56:04-05:00'
+        }
+
+        # Test message sync
+        commit_hash = manager.sync_message(test_message)
+        self.assertIsNotNone(commit_hash)
+        self.assertEqual(commit_hash, 'test_commit_hash')
+        
+        # Verify the message file was created with correct name format
+        message_files = os.listdir(manager.messages_dir)
+        self.assertEqual(len(message_files), 1)
+        
+        # Verify the filename follows our convention (YYYYMMDD_HHMMSS_ID.json)
+        filename = message_files[0]
+        self.assertTrue(filename.endswith('_123.json'))
+        
+        # Read the file and verify its contents
+        with open(os.path.join(manager.messages_dir, filename)) as f:
+            saved_message = json.load(f)
+        
+        # Verify all fields were saved correctly
+        self.assertEqual(saved_message['id'], test_message['id'])
+        self.assertEqual(saved_message['content'], test_message['content'])
+        self.assertEqual(saved_message['sender'], test_message['sender'])
+        self.assertEqual(saved_message['timestamp'], test_message['timestamp'])
+        
+        # Verify Git commands were called correctly
+        git_commands = [args[0] for args, _ in mock_popen.call_args_list]
+        
+        # Should have called: git add, git commit, git rev-parse, git push
+        expected_commands = [
+            ['git', 'add'],
+            ['git', 'commit'],
+            ['git', 'rev-parse'],
+            ['git', 'push']
+        ]
+        
+        for expected, actual in zip(expected_commands, git_commands):
+            self.assertEqual(expected, actual[:len(expected)])
+
+    @patch('subprocess.Popen')
+    def test_sync_message_failure(self):
+        """Test handling of Git command failures during sync."""
+        # Mock failed git command
+        process_mock = MagicMock()
+        process_mock.communicate.return_value = ('', 'error: failed to push')
+        process_mock.returncode = 1
+        mock_popen.return_value = process_mock
+
+        manager = GitSyncManager(self.test_dir)
+        test_message = {
+            'id': 456,
+            'content': 'This sync should fail',
+            'timestamp': '2025-01-07T15:56:04-05:00',
+            'sender': 'test_user',
+            'created_at': '2025-01-07T15:56:04-05:00'
+        }
+
+        # Test message sync failure
+        commit_hash = manager.sync_message(test_message)
+        self.assertIsNone(commit_hash)
+        
+        # Verify the message file was still created
+        message_files = os.listdir(manager.messages_dir)
+        self.assertEqual(len(message_files), 1)
+
     @patch('subprocess.run')
     def test_clone_repository(self, mock_run):
         """Test repository cloning."""
