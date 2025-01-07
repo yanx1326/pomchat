@@ -4,11 +4,11 @@ import http.server
 import socketserver
 import json
 import os
-import sqlite3
+import logging
 from urllib.parse import parse_qs, urlparse
 from http import HTTPStatus
 from datetime import datetime
-import logging
+from database import DatabaseManager
 
 # Configure logging
 logging.basicConfig(
@@ -20,12 +20,13 @@ logger = logging.getLogger(__name__)
 # Constants
 HOST = "localhost"
 PORT = 8000
-DATABASE_PATH = "database/messages.db"
 
 class MessageHandler(http.server.SimpleHTTPRequestHandler):
     """Custom HTTP request handler for the messaging application."""
 
     def __init__(self, *args, **kwargs):
+        # Initialize database manager
+        self.db_manager = DatabaseManager()
         # Set the directory for serving static files
         self.static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
         super().__init__(*args, **kwargs)
@@ -101,32 +102,15 @@ class MessageHandler(http.server.SimpleHTTPRequestHandler):
     def handle_get_messages(self):
         """Retrieve messages from the database."""
         try:
-            # Connect to SQLite database
-            with sqlite3.connect(DATABASE_PATH) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT id, content, timestamp, sender
-                    FROM messages
-                    ORDER BY timestamp DESC
-                    LIMIT 50
-                """)
-                messages = cursor.fetchall()
+            messages = self.db_manager.get_messages(limit=50)
+            
+            # Send response
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(messages).encode())
                 
-                # Convert to JSON
-                messages_json = json.dumps([{
-                    'id': msg[0],
-                    'content': msg[1],
-                    'timestamp': msg[2],
-                    'sender': msg[3]
-                } for msg in messages])
-                
-                # Send response
-                self.send_response(HTTPStatus.OK)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(messages_json.encode())
-                
-        except sqlite3.Error as e:
+        except Exception as e:
             logger.error(f"Database error: {str(e)}")
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Database error")
 
@@ -140,48 +124,34 @@ class MessageHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(HTTPStatus.BAD_REQUEST, "Missing required fields")
                 return
             
-            # Connect to SQLite database
-            with sqlite3.connect(DATABASE_PATH) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO messages (content, timestamp, sender)
-                    VALUES (?, ?, ?)
-                """, (
-                    message_data['content'],
-                    datetime.now().isoformat(),
-                    message_data['sender']
-                ))
-                conn.commit()
+            # Add message to database
+            message_id = self.db_manager.add_message(
+                content=message_data['content'],
+                sender=message_data['sender']
+            )
             
             # Send success response
             self.send_response(HTTPStatus.CREATED)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"status": "success"}).encode())
+            self.wfile.write(json.dumps({
+                "status": "success",
+                "message_id": message_id
+            }).encode())
             
         except json.JSONDecodeError:
             self.send_error(HTTPStatus.BAD_REQUEST, "Invalid JSON")
-        except sqlite3.Error as e:
+        except Exception as e:
             logger.error(f"Database error: {str(e)}")
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Database error")
 
 def init_database():
     """Initialize the SQLite database and create necessary tables."""
     try:
-        os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
-        with sqlite3.connect(DATABASE_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS messages (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    content TEXT NOT NULL,
-                    timestamp TEXT NOT NULL,
-                    sender TEXT NOT NULL
-                )
-            """)
-            conn.commit()
+        db_manager = DatabaseManager()
+        db_manager.init_database()
         logger.info("Database initialized successfully")
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"Failed to initialize database: {str(e)}")
         raise
 
