@@ -15,24 +15,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from server import MessageHandler
 from database import DatabaseManager
 
-class MockServer:
-    """Mock server class to simulate the server environment."""
-    def __init__(self):
-        self.headers = {}
-        self.response_code = None
-        self.response_headers = []
-        self.wfile = MagicMock()
-        self.rfile = MagicMock()
-
-    def send_response(self, code):
-        self.response_code = code
-
-    def send_header(self, key, value):
-        self.response_headers.append((key, value))
-
-    def end_headers(self):
-        pass
-
 class TestMessageEndpoints(unittest.TestCase):
     def setUp(self):
         """Set up test environment before each test."""
@@ -55,11 +37,14 @@ class TestMessageEndpoints(unittest.TestCase):
         self.db_manager = DatabaseManager(self.db_path)
         self.db_manager.init_database()
         
-        # Create mock server
-        self.server = MockServer()
-        
-        # Create message handler instance
-        self.handler = MessageHandler(self.server, ('localhost', 8000), None)
+        # Create handler instance with mocked server components
+        self.handler = MessageHandler.__new__(MessageHandler)
+        self.handler.headers = {}
+        self.handler.send_response = MagicMock()
+        self.handler.send_header = MagicMock()
+        self.handler.end_headers = MagicMock()
+        self.handler.wfile = MagicMock()
+        self.handler.rfile = MagicMock()
         self.handler.db_manager = self.db_manager
 
     def test_post_message_success(self):
@@ -70,10 +55,6 @@ class TestMessageEndpoints(unittest.TestCase):
             'sender': 'test_user'
         }
         
-        # Mock request body
-        self.server.rfile.read = MagicMock(return_value=json.dumps(test_message).encode())
-        self.server.headers = {'Content-Length': str(len(json.dumps(test_message)))}
-        
         # Mock Git sync
         with patch('git_sync.GitSyncManager.sync_message') as mock_sync:
             mock_sync.return_value = 'test_commit_hash'
@@ -82,7 +63,7 @@ class TestMessageEndpoints(unittest.TestCase):
             self.handler.handle_new_message(json.dumps(test_message).encode())
         
         # Verify response
-        self.assertEqual(self.server.response_code, HTTPStatus.CREATED)
+        self.handler.send_response.assert_called_with(HTTPStatus.CREATED)
         
         # Verify message was stored in database
         with sqlite3.connect(self.db_path) as conn:
@@ -106,15 +87,11 @@ class TestMessageEndpoints(unittest.TestCase):
         ]
         
         for test_message in test_cases:
-            # Mock request body
-            self.server.rfile.read = MagicMock(return_value=json.dumps(test_message).encode())
-            self.server.headers = {'Content-Length': str(len(json.dumps(test_message)))}
-            
             # Call the handler
             self.handler.handle_new_message(json.dumps(test_message).encode())
             
             # Verify response
-            self.assertEqual(self.server.response_code, HTTPStatus.BAD_REQUEST)
+            self.handler.send_response.assert_called_with(HTTPStatus.BAD_REQUEST)
             
             # Verify no message was stored
             with sqlite3.connect(self.db_path) as conn:
@@ -131,16 +108,15 @@ class TestMessageEndpoints(unittest.TestCase):
             'sender': 'test_user'
         }
         
-        # Mock request body
-        self.server.rfile.read = MagicMock(return_value=json.dumps(test_message).encode())
-        self.server.headers = {'Content-Length': str(len(json.dumps(test_message)))}
-        
         # Mock Git sync failure
         with patch('git_sync.GitSyncManager.sync_message') as mock_sync:
             mock_sync.return_value = None  # Simulate sync failure
             
             # Call the handler
             self.handler.handle_new_message(json.dumps(test_message).encode())
+        
+        # Verify response
+        self.handler.send_response.assert_called_with(HTTPStatus.CREATED)
         
         # Verify message was stored but not marked as synchronized
         with sqlite3.connect(self.db_path) as conn:
