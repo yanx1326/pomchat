@@ -46,6 +46,7 @@ class TestMessageEndpoints(unittest.TestCase):
         self.handler.wfile = MagicMock()
         self.handler.rfile = MagicMock()
         self.handler.client_address = ('127.0.0.1', 12345)  # Mock client address
+        self.handler.command = 'POST'  # Mock HTTP command
         self.handler.db_manager = self.db_manager
 
     def test_post_message_success(self):
