@@ -1,21 +1,28 @@
 # Git-Backed Messaging Application Specification
 
 ## Overview
-This project implements a simple messaging application with a unique feature: all messages are automatically backed up to a Git repository. The application consists of a Python-based backend server, SQLite database for local storage, and a basic web interface for testing functionality.
+This project implements a messaging application with GitHub integration for authentication and message storage. The application features a Python backend server, SQLite database for local storage, and a web interface with Markdown support and real-time updates.
 
 ## Core Features
 
 ### 1. Message Management
 - Store and retrieve messages with the following attributes:
-  - Content (text)
+  - Content (text with Markdown support)
   - Sender information
   - Timestamp
   - Git synchronization status
   - Git commit hash (when synchronized)
 - Support for retrieving the most recent messages (default: 50 messages)
 - Messages are stored both in SQLite and as individual JSON files in the Git repository
+- Markdown formatting support for message content
 
-### 2. Git Integration
+### 2. Authentication
+- GitHub OAuth integration for user authentication
+- User session management
+- Secure password hashing using Werkzeug
+- Environment variable configuration for GitHub OAuth credentials
+
+### 3. Git Integration
 - Automatic synchronization of messages to a GitHub repository
 - Each message is stored as a separate JSON file in the repository
 - Commit messages include sender information and message ID
@@ -25,12 +32,17 @@ This project implements a simple messaging application with a unique feature: al
   - Pushing to remote repository
   - Repository cloning for initial setup
 
-### 3. Web Interface
-- Simple HTML interface for testing functionality
+### 4. Web Interface
+- Modern HTML interface with CSS styling
+- Real-time message updates
+- Markdown editor for message composition
 - Test controls for:
   - Sending messages
   - Retrieving messages
 - Real-time display of API responses
+- Static file organization:
+  - `/static/css/` for stylesheets
+  - `/static/js/` for JavaScript files
 
 ## Technical Requirements
 
@@ -54,11 +66,13 @@ This project implements a simple messaging application with a unique feature: al
      - Synchronization status updates
 
 3. Git Integration:
-   - GitHub API integration using PyGithub
-   - Local Git operations using subprocess
+   - GitHub API integration using PyGithub and GitPython
+   - Local Git operations using GitPython
    - Environment variables for configuration:
      - `GITHUB_TOKEN`: GitHub API access token
      - `GITHUB_REPO`: Target repository name
+     - `GITHUB_CLIENT_ID`: OAuth client ID
+     - `GITHUB_CLIENT_SECRET`: OAuth client secret
 
 ### Project Structure
 ```
@@ -69,6 +83,8 @@ This project implements a simple messaging application with a unique feature: al
 ├── templates/          # HTML templates
 │   └── index.html     # Main web interface
 ├── static/            # Static assets
+│   ├── css/          # Stylesheets
+│   └── js/           # JavaScript files
 ├── database/          # SQLite database directory
 ├── messages/          # Git-tracked message files
 └── tests/             # Test suite
@@ -79,13 +95,27 @@ This project implements a simple messaging application with a unique feature: al
 - Python 3.x
 - Required packages:
   - `PyGithub`: GitHub API integration
+  - `GitPython`: Git operations
   - `python-dotenv`: Environment variable management
+  - `Werkzeug`: Password hashing and web utilities
+  - `markdown2`: Message formatting
+  - `requests`: HTTP client
+  - `python-dateutil`: Date handling
+  - `cryptography`: Security features
   - Standard library modules:
     - `http.server`
     - `sqlite3`
     - `json`
     - `logging`
     - `subprocess`
+
+### Command Line Interface
+- Server initialization: `python server.py`
+- Database initialization: `python server.py --init-db`
+- Optional arguments:
+  - `--host`: Specify host address (default: localhost)
+  - `--port`: Specify port number (default: 8000)
+  - `--debug`: Enable debug mode
 
 ## API Endpoints
 
